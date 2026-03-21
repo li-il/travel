@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom"; // 引入路由跳转钩子
 
 // 使用可靠的地图数据源
-const geoUrl = "https://cdn.jsdelivr.net";
+const geoUrl = "./world.json"; 
 
 // 你去过的城市数据
 const travelSpots = [
