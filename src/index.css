@@ -1,3 +1,17 @@
-@tailwind base;
+/* @tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities; */
+@import "tailwindcss";
+
+body {
+  /* 使用深蓝灰色的径向渐变，中心稍亮 */
+  background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 50%, #020617 100%);
+  min-height: 100vh;
+}
+
+/* 自定义一个更加通透的磨砂玻璃效果 */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
