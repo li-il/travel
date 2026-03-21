@@ -37,10 +37,12 @@ function MapHome() {
                     key={geo.rsmKey}
                     geography={geo}
                     fill="#1e293b"
-                    stroke="#334155"
+                    stroke="#38bdf8"
+                    strokeWidth={0.5}
                     style={{
                       default: { outline: "none" },
-                      hover: { fill: "#2d3748", outline: "none" }
+                      hover: { fill: "#475569", outline: "none" }, 
+                      pressed: { outline: "none" }
                     }}
                   />
                 ))
