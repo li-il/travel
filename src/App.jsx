@@ -1,121 +1,85 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+// 在 App.jsx 顶部修改
+const geoUrl = import.meta.env.BASE_URL + "world.json"; 
+import React from "react";
+import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { motion } from "framer-motion";
+
+// 世界地图数据
+
+
+
+
+// 你去过的城市示例 (经度, 纬度)
+const travelSpots = [
+  { id: "toronto", name: "Toronto", coordinates: [-79.38, 43.65] },
+  { id: "shanghai", name: "Shanghai", coordinates: [121.47, 31.23] },
+  { id: "london", name: "London", coordinates: [-0.12, 51.50] }
+];
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+      <h1 className="text-4xl font-bold text-white mb-8 font-mono tracking-widest">
+        MY TRAVEL LOG
+      </h1>
+      
+      <div className="w-full max-w-5xl aspect-video bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-2xl overflow-hidden relative">
+        {/* 添加 aspect-video 或固定高度如 h-[600px] */}
+        <ComposableMap projectionConfig={{ scale: 150 }}>
+          <Geographies geography={geoUrl}>
+            {({ geographies }) => {
+              console.log("Current Geographies:", geographies); // 重点看这里
+              return geographies && geographies.length > 0 ? (
+                geographies.map((geo) => (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill="#1e293b"
+                    stroke="#334155"
+                    style={{
+                      default: { outline: "none" },
+                      hover: { fill: "#2d3748", outline: "none" }
+                    }}
+                  />
+                ))
+              ) : (
+                <text fill="white">Loading Map...</text> // 数据加载中或失败时的占位符
+              )
+            }}
+          </Geographies>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {travelSpots.map(({ name, coordinates, id }) => (
+            <Marker key={id} coordinates={coordinates}>
+              {/* 发光脉冲效果 */}
+              <motion.circle
+                initial={{ r: 0, opacity: 0.6 }}
+                animate={{ r: 12, opacity: 0 }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                fill="#60a5fa"
+              />
+              {/* 城市点 */}
+              <motion.circle
+                r={4}
+                fill="#3b82f6"
+                stroke="#fff"
+                strokeWidth={1}
+                whileHover={{ scale: 1.8 }}
+                className="cursor-pointer"
+                onClick={() => alert(`Redirecting to ${name} gallery...`)}
+              />
+              <text
+                textAnchor="middle"
+                y={-15}
+                style={{ fontFamily: "monospace", fill: "#94a3b8", fontSize: "10px" }}
+              >
+                {name}
+              </text>
+            </Marker>
+          ))}
+        </ComposableMap>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
