@@ -35,11 +35,13 @@ function MapHome() {
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
-                    fill="#334155" // 较亮的陆地颜色
-                    stroke="#475569" // 边界线
+                    fill="#1e293b" // 较亮的陆地颜色
+                    stroke="#38bdf8" // 边界线
+                    strokeWidth={0.5}
                     style={{
                       default: { outline: "none" },
-                      hover: { fill: "#475569", outline: "none" }
+                      hover: { fill: "#475569", outline: "none" }, 
+                      pressed: { outline: "none" }
                     }}
                   />
                 ))
