@@ -22,6 +22,10 @@ function Gallery() {
       };
     });
 
+  const visitedCountriesCount = 1; // 目前你可以手动设置，或者根据城市 id 逻辑判断
+  const totalCountries = 195;
+  const explorationPercentage = ((visitedCountriesCount / totalCountries) * 100).toFixed(1);
+
   // 2. 按日期分组
   const groupedPhotos = allPhotos.reduce((groups, photo) => {
     const date = photo.date;
@@ -71,11 +75,36 @@ function Gallery() {
             animate={{ opacity: 1, y: 0 }}
             className="glass-panel grid grid-cols-2 md:flex gap-4 md:gap-12 p-8 rounded-[2rem]"
           >
+            <div className="flex gap-12 border-r border-white/10 pr-12 hidden md:flex">
             <SmallStat icon={<ImageIcon size={14}/>} label="Moments" value={totalPhotos} />
             <SmallStat icon={<Clock size={14}/>} label="Expedition" value={`${uniqueDates} Days`} />
             <SmallStat icon={<Globe size={14}/>} label="Status" value="Live" />
-          </motion.div>
-        </header>
+            </div>
+
+          {/* 新增：全球探索进度条 */}
+          <div className="flex-grow w-full">
+            <div className="flex justify-between items-end mb-3">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] mb-1">Global Exploration</span>
+                <span className="text-2xl font-black text-white tracking-tighter">
+                  {explorationPercentage}<span className="text-blue-500 text-sm ml-1">%</span>
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-600 uppercase italic">Goal: 100%</span>
+            </div>
+            {/* 进度条背景 */}
+            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+              {/* 进度条填充 */}
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${explorationPercentage}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-blue-600 via-blue-400 to-emerald-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+              />
+            </div>
+          </div>
+        </motion.div>
+      </header>
 
         {/* 3. 时间轴：加宽线条并使用渐变色 */}
         <div className="relative border-l-2 border-white/5 ml-2 md:ml-4 pl-8 md:pl-16 mt-20">
