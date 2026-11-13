@@ -65,7 +65,17 @@ function MapHome() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <h1 className="text-4xl font-bold text-white mb-8 font-mono tracking-widest uppercase">My Travel Log</h1>
+      <header className="w-full max-w-5xl px-2 pt-6 mb-8 md:mb-10 text-center">
+        <p className="flex items-center justify-center gap-3 mb-4 text-[10px] md:text-xs font-mono uppercase tracking-[0.3em] text-blue-400">
+          <span aria-hidden="true" className="h-px w-8 bg-blue-500/40" />
+          Places &amp; Memories
+          <span aria-hidden="true" className="h-px w-8 bg-blue-500/40" />
+        </p>
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-sans font-extrabold leading-tight tracking-tight text-slate-100">
+          My Travel{' '}
+          <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Log.</span>
+        </h1>
+      </header>
 
       {/* 3. 悬浮选择列表 (仅在重叠时显示) */}
       <AnimatePresence>
