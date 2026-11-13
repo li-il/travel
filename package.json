@@ -11,9 +11,11 @@
     "preview": "vite preview",
     "photos:clean": "python3 scripts/clean-image-metadata.py",
     "photos:check": "python3 scripts/clean-image-metadata.py --check",
-    "prebuild": "npm run photos:clean",
+    "prebuild": "npm run photos:clean && npm run travel:summary",
     "predeploy": "npm run build",
-    "photos:setup": "python3 scripts/setup-exiftool.py"
+    "photos:setup": "python3 scripts/setup-exiftool.py",
+    "travel:summary": "node scripts/generate-travel-summary.mjs",
+    "predev": "npm run travel:summary"
   },
   "dependencies": {
     "d3-geo": "^3.1.1",

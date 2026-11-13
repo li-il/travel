@@ -12,3 +12,7 @@ npm run dev
 ```
 
 `npm run build` cleans photo metadata before building. Pushing `main` deploys to GitHub Pages.
+
+## Shared Global Footprint
+
+`npm run travel:summary` calculates the visited-country percentage from `src/data/travelData.js` and `public/world.json`, writing `public/travel-summary.json`. It runs automatically before development and production builds. Both Travel galleries and the portfolio homepage read `/travel/travel-summary.json`, so the statistic has one published source. Publish the Travel repository after updating travel spots to refresh both sites.

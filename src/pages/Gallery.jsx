@@ -2,16 +2,13 @@ import React, { useState, useEffect } from 'react'; // 修复：必须引入 Hoo
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Calendar, MapPin, Globe, Clock, Image as ImageIcon } from 'lucide-react';
-import { geoContains } from "d3-geo";
-import { feature } from "topojson-client";
-import { travelSpots, TOTAL_COUNTRIES } from "../data/travelData"; // 引入共享数据
 
 // 扫描所有深度的图片
 const imageModules = import.meta.glob('../assets/trips/**/*.{png,jpg,jpeg,JPG,PNG}', { eager: true });
 
 function Gallery() {
   const { id } = useParams();
-  const [visitedCountries, setVisitedCountries] = useState(0);
+  const [explorationPercentage, setExplorationPercentage] = useState(null);
 
   const allPhotos = Object.keys(imageModules)
   .filter((path) => {
@@ -40,36 +37,26 @@ function Gallery() {
     };
   });
 
-  // // 2. 获取所有标记点 (你可以根据需要在这里继续添加城市)
-  // const travelSpots = [
-  //   { name: "Toronto", coordinates: [-79.38, 43.65] },
-  //   { name: "Shanghai", coordinates: [121.47, 31.23] },
-  //   { name: "London", coordinates: [-0.12, 51.50] },
-  //   // 新增城市示例：
-  //   { name: "Vancouver", coordinates: [-123.12, 49.28] },
-  //   { name: "Tokyo", coordinates: [139.69, 35.67] },
-  // ];
-
   useEffect(() => {
-    // 自动计算已访问国家 (确保 world.json 在 public 文件夹下)
-    fetch("./world.json")
-      .then(response => response.json())
-      .then(worldData => {
-        const countries = feature(worldData, worldData.objects.countries).features;
-        const visitedSet = new Set();
-
-     
-        // 关键：现在自动使用共享的 travelSpots 数组计算
-        travelSpots.forEach(spot => {
-          const country = countries.find(c => geoContains(c, spot.coordinates));
-          if (country) visitedSet.add(country.id || country.properties.name);
-        });
-        setVisitedCountries(visitedSet.size);
-      });
+    const controller = new AbortController();
+    fetch(`${import.meta.env.BASE_URL}travel-summary.json`, {
+      signal: controller.signal,
+      cache: 'no-cache',
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Travel summary unavailable');
+        return response.json();
+      })
+      .then(summary => {
+        const value = Number(summary.explorationPercentage);
+        if (!Number.isFinite(value) || value < 0 || value > 100) {
+          throw new Error('Invalid travel summary');
+        }
+        setExplorationPercentage(value.toFixed(1));
+      })
+      .catch(() => {});
+    return () => controller.abort();
   }, []);
-
-  const totalCountries = 195;
-  const explorationPercentage = ((visitedCountries / totalCountries) * 100).toFixed(1);
 
   // 3. 按日期分组
   const groupedPhotos = allPhotos.reduce((groups, photo) => {
@@ -138,7 +125,7 @@ function Gallery() {
                 <div className="flex flex-col">
                   <span className="text-[9px] md:text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Global Exploration</span>
                   <span className="text-xl md:text-2xl font-black text-white tracking-tighter">
-                    {explorationPercentage}<span className="text-blue-500 text-xs ml-1">%</span>
+                    {explorationPercentage ?? '—'}<span className="text-blue-500 text-xs ml-1">%</span>
                   </span>
                 </div>
                 <span className="text-[9px] font-mono text-slate-600 uppercase italic hidden sm:inline">Goal: 100%</span>
@@ -147,7 +134,7 @@ function Gallery() {
               <div className="h-1.5 md:h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${explorationPercentage}%` }}
+                  animate={{ width: `${explorationPercentage ?? 0}%` }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
                   className="h-full bg-gradient-to-r from-blue-600 via-blue-400 to-emerald-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                 />
