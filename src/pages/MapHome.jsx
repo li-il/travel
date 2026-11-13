@@ -1,28 +1,71 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { travelSpots } from "../data/travelData"; 
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, ArrowRight } from "lucide-react"; // 修复了导入
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion as Motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Globe2, MapPin, Minus, Navigation, Plus, RotateCcw, X } from 'lucide-react';
+import { geoContains } from 'd3-geo';
+import { ComposableMap, Geographies, Geography, Graticule, Marker, ZoomableGroup } from 'react-simple-maps';
+import { travelSpots } from '../data/travelData';
 
-const geoUrl = "./world.json"; 
+const geoUrl = `${import.meta.env.BASE_URL}world.json`;
+const INITIAL_POSITION = { coordinates: [0, 0], zoom: 1 };
+
+function nearbySpots(spot) {
+  return travelSpots.filter(other =>
+    Math.abs(other.coordinates[0] - spot.coordinates[0]) < 2 &&
+    Math.abs(other.coordinates[1] - spot.coordinates[1]) < 2
+  );
+}
 
 function MapHome() {
   const navigate = useNavigate();
-  // 1. 新增：存储当前的缩放状态
-  const [position, setPosition] = useState({ coordinates: [0, 20], zoom: 1 });
-
-  // 2. 监听缩放变化的函数
-  const handleMoveEnd = (position) => {
-    setPosition(position);
-  };
-  // --- 状态定义 ---
-  const [queryCity, setQueryCity] = useState("");
+  const reducedMotion = useReducedMotion();
+  const [position, setPosition] = useState(INITIAL_POSITION);
+  const [hoveredGroup, setHoveredGroup] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ left: 16, top: 16 });
+  const [queryCity, setQueryCity] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hoveredGroup, setHoveredGroup] = useState(null); 
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // 1. 智能查询函数
+  useEffect(() => {
+    if (!hoveredGroup) return;
+    const dismiss = event => {
+      if (event.key === 'Escape') setHoveredGroup(null);
+    };
+    const close = () => setHoveredGroup(null);
+    window.addEventListener('keydown', dismiss);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('keydown', dismiss);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [hoveredGroup]);
+
+  function showGroup(event, group) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX ?? rect.right;
+    const y = event.clientY ?? rect.top;
+    setMenuPosition({
+      left: Math.max(12, Math.min(x + 12, window.innerWidth - 252)),
+      top: Math.max(12, Math.min(y - 20, window.innerHeight - (88 + group.length * 48))),
+    });
+    setHoveredGroup(group);
+  }
+
+  function openSpot(event, spot) {
+    const group = nearbySpots(spot);
+    if (position.zoom <= 5 && group.length > 1) {
+      showGroup(event, group);
+    } else {
+      navigate(`/gallery/${spot.id}`);
+    }
+  }
+
+  function changeZoom(multiplier) {
+    setHoveredGroup(null);
+    setPosition(current => ({ ...current, zoom: Math.min(12, Math.max(1, current.zoom * multiplier)) }));
+  }
+
   const handleSmartSearch = async () => {
     if (!queryCity) return;
     setLoading(true);
@@ -38,184 +81,182 @@ function MapHome() {
         await navigator.clipboard.writeText(codeSnippet);
         alert(`✅ 代码已复制:\n${codeSnippet}`);
       }
-    } catch (err) {
+    } catch {
       alert("查询失败，请检查网络");
     }
     setLoading(false);
   };
-
-  // 2. 悬停检测函数
-  const handleMarkerHover = (e, currentSpot) => {
-    const threshold = 2.0; 
-    if (!currentSpot.coordinates) return;
-
-    const nearby = travelSpots.filter(spot => {
-      const lonDiff = Math.abs(spot.coordinates[0] - currentSpot.coordinates[0]);
-      const latDiff = Math.abs(spot.coordinates[1] - currentSpot.coordinates[1]);
-      return lonDiff < threshold && latDiff < threshold;
-    });
-
-    if (nearby.length > 1) {
-      setHoveredGroup(nearby);
-      setMousePos({ x: e.clientX, y: e.clientY });
-    } else {
-      setHoveredGroup(null);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <header className="w-full max-w-5xl px-2 pt-6 mb-8 md:mb-10 text-center">
-        <p className="flex items-center justify-center gap-3 mb-4 text-[10px] md:text-xs font-mono uppercase tracking-[0.3em] text-blue-400">
-          <span aria-hidden="true" className="h-px w-8 bg-blue-500/40" />
-          Places &amp; Memories
-          <span aria-hidden="true" className="h-px w-8 bg-blue-500/40" />
-        </p>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-sans font-extrabold leading-tight tracking-tight text-slate-100">
-          My Travel{' '}
-          <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Log.</span>
-        </h1>
-      </header>
+    <main className="atlas-page min-h-screen px-4 py-6 sm:px-8 sm:py-8 text-slate-100">
+      <div className="mx-auto w-full max-w-6xl">
+        <a href="https://li-il.github.io/#/" className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 transition-colors hover:text-blue-300">
+          <ArrowLeft size={14} /> Back to portfolio
+        </a>
 
-      {/* 3. 悬浮选择列表 (仅在重叠时显示) */}
-      <AnimatePresence>
-        {hoveredGroup && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            onMouseLeave={() => setHoveredGroup(null)}
-            style={{ 
-              position: 'fixed',
-              left: mousePos.x + 15, 
-              top: mousePos.y - 15,
-              zIndex: 9999 
-            }}
-            className="bg-slate-900/95 backdrop-blur-xl border border-blue-500/30 p-4 rounded-[2rem] shadow-2xl min-w-[200px]"
-          >
-            <div className="text-blue-400 text-[10px] font-mono mb-3 px-2 flex items-center">
-              <Navigation size={12} className="mr-2" /> SELECT LOCATION
+        <header className="px-2 pt-10 pb-8 text-center sm:pt-12 sm:pb-10">
+          <p className="mb-4 flex items-center justify-center gap-3 text-[10px] font-mono uppercase tracking-[0.3em] text-blue-400 sm:text-xs">
+            <span aria-hidden="true" className="h-px w-8 bg-blue-500/40" />
+            Places &amp; Memories
+            <span aria-hidden="true" className="h-px w-8 bg-blue-500/40" />
+          </p>
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl">
+            My Travel{' '}
+            <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text italic text-transparent">Log.</span>
+          </h1>
+        </header>
+
+        <section aria-label="Interactive travel atlas" className="atlas-panel overflow-hidden rounded-[1.75rem] border border-white/10 sm:rounded-[2.5rem]">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 px-5 py-5 sm:px-8 sm:py-6">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-400/15 bg-blue-400/10 text-blue-300"><Globe2 size={20} /></span>
+              <div>
+                <p className="mb-1 text-[9px] font-mono uppercase tracking-[0.25em] text-slate-400">A personal atlas</p>
+                <h2 className="text-lg font-semibold tracking-tight text-slate-100 sm:text-xl">Every place, a story<span className="text-emerald-400">.</span></h2>
+              </div>
             </div>
-            <div className="space-y-1">
-              {hoveredGroup.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => navigate(`/gallery/${s.id}`)}
-                  className="w-full text-left px-4 py-3 rounded-xl hover:bg-blue-600 transition-all text-white text-sm font-bold flex justify-between items-center group"
-                >
-                  {s.name}
-                  <ArrowRight size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/15 bg-blue-400/5 px-3 py-2 text-[10px] font-mono text-blue-200">
+              <MapPin size={12} className="text-emerald-300" /> {travelSpots.length} destinations
+            </span>
+          </div>
+
+          <div className="atlas-canvas relative aspect-[4/3] sm:aspect-[16/9]">
+            <ComposableMap width={960} height={540} projectionConfig={{ scale: 160 }} className="atlas-map" aria-label="World map with clickable travel destinations">
+              <defs>
+                <linearGradient id="atlas-land" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#1e3046" />
+                  <stop offset="100%" stopColor="#132034" />
+                </linearGradient>
+              </defs>
+              <ZoomableGroup
+                zoom={position.zoom}
+                center={position.coordinates}
+                minZoom={1}
+                maxZoom={12}
+                onMoveStart={() => setHoveredGroup(null)}
+                onMoveEnd={setPosition}
+              >
+                <Graticule stroke="#55718c" strokeWidth={0.45} strokeOpacity={0.14} pointerEvents="none" />
+                <Geographies geography={geoUrl}>
+                  {({ geographies }) => geographies.map(geo => {
+                    const visited = travelSpots.some(spot => geoContains(geo, spot.coordinates));
+                    return (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        tabIndex={-1}
+                        fill={visited ? '#193e54' : 'url(#atlas-land)'}
+                        stroke={visited ? '#37637c' : '#304158'}
+                        strokeWidth={0.55}
+                        vectorEffect="non-scaling-stroke"
+                        style={{
+                          default: { outline: 'none' },
+                          hover: { fill: visited ? '#22566b' : '#243b52', outline: 'none' },
+                          pressed: { fill: visited ? '#22566b' : '#243b52', outline: 'none' },
+                        }}
+                      />
+                    );
+                  })}
+                </Geographies>
+
+                {travelSpots.map(spot => {
+                  const radius = 4 / Math.sqrt(position.zoom);
+                  return (
+                    <Marker key={spot.id} coordinates={spot.coordinates}>
+                      <Motion.circle
+                        r={radius * 2.8}
+                        fill="#34d399"
+                        pointerEvents="none"
+                        animate={reducedMotion ? { opacity: 0.12 } : { opacity: [0.2, 0.04, 0.2] }}
+                        transition={{ repeat: Infinity, duration: 3 }}
+                      />
+                      <g
+                        className="atlas-marker cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open ${spot.name} gallery or nearby destinations`}
+                        onMouseEnter={event => {
+                          const group = nearbySpots(spot);
+                          if (position.zoom <= 5 && group.length > 1) showGroup(event, group);
+                          else setHoveredGroup(null);
+                        }}
+                        onClick={event => openSpot(event, spot)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openSpot(event, spot);
+                          }
+                        }}
+                      >
+                        <circle className="atlas-marker-dot" r={radius} fill="#60a5fa" stroke="#d1fae5" strokeWidth={1.4 / Math.sqrt(position.zoom)} />
+                        <circle r={radius} fill="transparent" stroke="transparent" strokeWidth={20} vectorEffect="non-scaling-stroke" />
+                        <title>{spot.name}</title>
+                      </g>
+                      {position.zoom > 3 && (
+                        <text textAnchor="middle" y={-(radius + 6)} style={{ fontSize: `${11 / Math.sqrt(position.zoom)}px`, fill: '#dbeafe', pointerEvents: 'none' }}>{spot.name}</text>
+                      )}
+                    </Marker>
+                  );
+                })}
+              </ZoomableGroup>
+            </ComposableMap>
+
+            <div className="absolute right-3 bottom-3 flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/80 p-1.5 shadow-xl backdrop-blur-xl sm:right-6 sm:bottom-6">
+              <button type="button" aria-label="Zoom in" disabled={position.zoom >= 12} onClick={() => changeZoom(1.5)} className="atlas-control"><Plus size={17} /></button>
+              <button type="button" aria-label="Zoom out" disabled={position.zoom <= 1} onClick={() => changeZoom(1 / 1.5)} className="atlas-control"><Minus size={17} /></button>
+              <span className="mx-2 my-0.5 h-px bg-white/10" />
+              <button type="button" aria-label="Reset map view" onClick={() => { setHoveredGroup(null); setPosition(INITIAL_POSITION); }} className="atlas-control"><RotateCcw size={15} /></button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 px-5 py-4 sm:px-8">
+            <div className="flex items-center gap-4 text-[9px] font-mono uppercase tracking-[0.14em] text-slate-400 sm:text-[10px]">
+              <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_10px_#60a5fa55]" /> Destinations</span>
+              <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-sm border border-emerald-300/40 bg-emerald-300/15" /> Visited countries</span>
+            </div>
+            <p className="text-[11px] text-slate-500">Drag to explore · Scroll or pinch to zoom</p>
+          </div>
+        </section>
+
+        <p className="mt-5 text-center text-xs leading-relaxed text-slate-400 sm:mt-6">Choose a destination to open its gallery. Nearby places appear together.</p>
+
+        <AnimatePresence>
+          {hoveredGroup && (
+            <Motion.div
+              key="destination-picker"
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              transition={{ duration: reducedMotion ? 0 : 0.15 }}
+              onMouseLeave={() => setHoveredGroup(null)}
+              style={{ position: 'fixed', ...menuPosition, zIndex: 50 }}
+              className="w-60 rounded-3xl border border-blue-300/20 bg-slate-900/95 p-3 shadow-2xl backdrop-blur-xl"
+              role="dialog"
+              aria-label="Choose a nearby destination"
+            >
+              <div className="mb-2 flex items-center justify-between px-2">
+                <span className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.18em] text-blue-300"><Navigation size={11} /> Nearby places</span>
+                <button type="button" aria-label="Close destination picker" onClick={() => setHoveredGroup(null)} className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white"><X size={13} /></button>
+              </div>
+              {hoveredGroup.map(spot => (
+                <button key={spot.id} type="button" onClick={() => navigate(`/gallery/${spot.id}`)} className="group flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-200 transition-colors hover:bg-blue-400/10 hover:text-blue-200 focus-visible:outline-2 focus-visible:outline-blue-400">
+                  {spot.name}<ArrowRight size={14} className="text-emerald-300 transition-transform group-hover:translate-x-1" />
                 </button>
               ))}
+            </Motion.div>
+          )}
+        </AnimatePresence>
+
+        {import.meta.env.DEV && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+          <aside className="fixed right-4 bottom-4 z-40 rounded-3xl border border-blue-400/20 bg-slate-900/95 p-5 shadow-2xl backdrop-blur-xl">
+            <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-blue-300">Smart Coords Finder</h3>
+            <div className="flex gap-2">
+              <input type="text" value={queryCity} onChange={event => setQueryCity(event.target.value)} placeholder="City, Country" aria-label="Find city coordinates" className="w-40 rounded-full border border-white/10 bg-slate-950 px-4 py-2 text-xs text-white outline-none focus:border-blue-400" />
+              <button type="button" onClick={handleSmartSearch} disabled={loading} className="rounded-full bg-blue-600 px-4 py-2 text-[10px] font-bold text-white hover:bg-blue-500 disabled:opacity-50">{loading ? '...' : 'GET CODE'}</button>
             </div>
-          </motion.div>
+          </aside>
         )}
-      </AnimatePresence>
-
-      {/* 4. 地图主容器 (仅保留一个) */}
-      <div className="w-full max-w-5xl aspect-video bg-slate-900 border border-slate-800 rounded-[3rem] p-4 shadow-2xl overflow-hidden relative">
-      <ComposableMap projectionConfig={{ scale: 160 }}>
-        {/* 3. 使用 onMoveEnd 实时获取 zoom 倍数 */}
-        <ZoomableGroup 
-            zoom={position.zoom}
-            center={position.coordinates}
-            onMoveEnd={handleMoveEnd}
-            maxZoom={12}
-          >
-          <Geographies geography={geoUrl}>
-            {({ geographies }) =>
-              geographies.map((geo) => (
-                <Geography 
-                  key={geo.rsmKey} 
-                  geography={geo} 
-                  fill="#1e293b" 
-                  stroke="#334155" 
-                  style={{ default: { outline: "none" } }} 
-                />
-              ))
-            }
-          </Geographies>
-
-          {travelSpots.map((spot) => {
-              // 4. 关键逻辑：计算动态大小
-              // 当 zoom 变大时，我们将 r 除以 zoom 的平方根，让圆点在视觉上变小
-              const dynamicRadius = 5 / Math.sqrt(position.zoom);
-              const dynamicStroke = 2 / Math.sqrt(position.zoom);
-
-              return (
-                <Marker key={spot.id} coordinates={spot.coordinates}>
-                  {/* 背景光圈也要跟着缩小 */}
-                  <motion.circle
-                    r={dynamicRadius * 3}
-                    fill="#60a5fa"
-                    animate={{ opacity: [0.6, 0] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  />
-                  {/* 城市圆点 */}
-                  <motion.circle
-                    r={dynamicRadius}
-                    fill="#3b82f6"
-                    stroke="#fff"
-                    strokeWidth={dynamicStroke}
-                    className="cursor-pointer"
-                    onMouseEnter={(e) => handleMarkerHover(e, spot)}
-                    onClick={() => {
-                      // 5. 交互改进：如果已经放大到一定程度，就不弹出列表，直接跳转
-                      if (position.zoom > 5) {
-                        navigate(`/gallery/${spot.id}`);
-                      } else if (!hoveredGroup) {
-                        navigate(`/gallery/${spot.id}`);
-                      }
-                    }}
-                  />
-                  {/* 名字：在缩放较小时隐藏，放大后才显示 */}
-                  {position.zoom > 3 && (
-                    <text
-                      textAnchor="middle"
-                      y={-(dynamicRadius + 5)}
-                      style={{ 
-                        fontSize: `${10 / Math.sqrt(position.zoom)}px`, 
-                        fill: "#94a3b8", 
-                        pointerEvents: "none" 
-                      }}
-                    >
-                      {spot.name}
-                    </text>
-                  )}
-                </Marker>
-              );
-            })}
-          </ZoomableGroup>
-        </ComposableMap>
       </div>
-
-      {/* 5. 智能查询器 (仅本地可见) */}
-      {(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (
-        <div className="fixed bottom-10 right-10 z-[100] p-6 bg-slate-900/90 backdrop-blur-xl border border-blue-500/30 rounded-[2rem] shadow-2xl">
-          <h4 className="text-[10px] font-mono text-blue-400 mb-3 uppercase tracking-widest font-bold">Smart Coords Finder</h4>
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              value={queryCity}
-              onChange={(e) => setQueryCity(e.target.value)}
-              placeholder="City, Country" 
-              className="bg-slate-950 border border-white/10 rounded-full px-4 py-2 text-xs text-white outline-none focus:border-blue-500 w-40"
-            />
-            <button 
-              onClick={handleSmartSearch}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full text-[10px] font-bold transition-all disabled:opacity-50"
-            >
-              {loading ? "..." : "GET CODE"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <footer className="mt-8 text-slate-500 text-sm font-mono italic">
-        Hover over markers to reveal overlapping destinations.
-      </footer>
-    </div>
+    </main>
   );
 }
 

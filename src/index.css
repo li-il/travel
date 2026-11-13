@@ -15,3 +15,48 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+
+/* Atlas shares the gallery's glass panels and the portfolio's blue/green accents. */
+.atlas-page {
+  background: radial-gradient(ellipse at 50% 5%, rgba(30, 58, 95, 0.28), transparent 55%), #020617;
+}
+.atlas-panel {
+  background: rgba(15, 23, 42, 0.68);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(16px);
+}
+.atlas-canvas {
+  background: radial-gradient(ellipse at 50% 45%, #101e32 0%, #091224 60%, #070f1e 100%);
+}
+.atlas-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+.atlas-map:active { cursor: grabbing; }
+.atlas-marker { outline: none; }
+.atlas-marker-dot { transition: fill 150ms ease; }
+.atlas-marker:hover .atlas-marker-dot, .atlas-marker:focus-visible .atlas-marker-dot {
+  fill: #6ee7b7;
+  stroke: #fff;
+  outline: none;
+  filter: drop-shadow(0 0 4px rgba(110, 231, 183, 0.5));
+}
+.atlas-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: #cbd5e1;
+  transition: color 150ms ease, background 150ms ease;
+}
+.atlas-control:hover { color: #93c5fd; background: rgba(96, 165, 250, 0.1); }
+.atlas-control:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.atlas-control:disabled { opacity: 0.3; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  .atlas-marker-dot, .atlas-control { transition: none; }
+}
